@@ -5,18 +5,17 @@ set -ex
 echo "Installing kubernetes-master on $JUJU_UNIT_NAME"
 
 TGT_DIR=/usr/local/bin
+VERSION=0.8.1
 
-bzip2 -k -c -d $CHARM_DIR/files/apiserver.amd64.bz2 > $TGT_DIR/apiserver
+bzip2 -k -c -d $CHARM_DIR/files/$VERSION/apiserver.amd64.bz2 > $TGT_DIR/apiserver
 chmod 555 $TGT_DIR/apiserver
 
-bzip2 -k -c -d $CHARM_DIR/files/controller-manager.amd64.bz2 > $TGT_DIR/controller-manager
+bzip2 -k -c -d $CHARM_DIR/files/$VERSION/controller-manager.amd64.bz2 > $TGT_DIR/controller-manager
 chmod 555 $TGT_DIR/controller-manager
 
-bzip2 -k -c -d $CHARM_DIR/files/scheduler.amd64.bz2 > $TGT_DIR/scheduler
+bzip2 -k -c -d $CHARM_DIR/files/$VERSION/scheduler.amd64.bz2 > $TGT_DIR/scheduler
 chmod 555 $TGT_DIR/scheduler
 
 apt-get install -q -y nginx
 
 open-port 8080
-
-
