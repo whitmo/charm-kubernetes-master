@@ -33,7 +33,7 @@ Usage
 To deploy a Kubernetes environment in Juju :
 
 
-    juju deploy cs:~hazamat/trusty/etcd
+    juju deploy cs:~hazmat/trusty/etcd
     juju deploy cs:~hazmat/trusty/flannel
     juju deploy local:trusty/kubernetes-master
     juju deploy local:trusty/kubernetes
