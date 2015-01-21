@@ -16,6 +16,9 @@ def config_changed():
     """
     Called whenever our service configuration changes.
     """
+    from install_kubernetes import InstallKubernetes
+    installer = InstallKubernetes()
+    installer.install()
     relation_changed()
 
 

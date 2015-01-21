@@ -2,32 +2,13 @@
 
 set -ex
 
-ARCH="amd64"
-OUTPUT_DIR=/usr/local/bin
-VERSION="v0.8.1"
-# Create a kubernetes master tar file name with the version and architecture.
-KUBERNETES_MASTER_TAR=$CHARM_DIR/files/kubernetes-master-$VERSION-$ARCH.tar.gz
+apt-get install -y build-essential libssl-dev libffi-dev nginx python-dev python-pip wget
+pip install gsutil
 
-echo "Installing kubernetes-master on $JUJU_UNIT_NAME"
-
-# Install any additional packages needed for the charm.
-apt-get install -q -y nginx wget 
-
-# If the tar does not exist for the version and architecture download it.
-if [ ! -f $CHARM_DIR/files/kubernetes-master-$VERSION-$ARCH.tar.gz ]; then
-  source $CHARM_DIR/hooks/create_kubernetes_tar.sh
-  download_kubernetes
-  extract_kubernetes
-  recombine_kubernetes_master $KUBERNETES_MASTER_TAR
-fi
-
-# Extract the kubernetes master tar file.
-tar -xvf $KUBERNETES_MASTER_TAR -C $OUTPUT_DIR
-
-# Create symlinks so the short names can be called.
-ln -s $OUTPUT_DIR/kube-apiserver $OUTPUT_DIR/apiserver
-ln -s $OUTPUT_DIR/kube-controller-manager $OUTPUT_DIR/controller-manager
-ln -s $OUTPUT_DIR/kube-scheduler $OUTPUT_DIR/scheduler
+VERSION=`config-get version`
+ARCH=`dpkg --print-architecture`
+# List the files available for the version and architecture error if none exist.
+gsutil ls gs://kubernetes-release/release/$VERSION/bin/linux/$ARCH/
 
 # Open port 8080 for nginx.
 open-port 8080
