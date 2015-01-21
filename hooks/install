@@ -2,20 +2,32 @@
 
 set -ex
 
+ARCH="amd64"
+OUTPUT_DIR=/usr/local/bin
+VERSION="v0.8.1"
+# Create a kubernetes master tar file name with the version and architecture.
+KUBERNETES_MASTER_TAR=$CHARM_DIR/files/kubernetes-master-$VERSION-$ARCH.tar.gz
+
 echo "Installing kubernetes-master on $JUJU_UNIT_NAME"
 
-TGT_DIR=/usr/local/bin
-VERSION=0.8.1
+# Install any additional packages needed for the charm.
+apt-get install -q -y nginx wget 
 
-bzip2 -k -c -d $CHARM_DIR/files/$VERSION/apiserver.amd64.bz2 > $TGT_DIR/apiserver
-chmod 555 $TGT_DIR/apiserver
+# If the tar does not exist for the version and architecture download it.
+if [ ! -f $CHARM_DIR/files/kubernetes-master-$VERSION-$ARCH.tar.gz ]; then
+  source $CHARM_DIR/hooks/create_kubernetes_tar.sh
+  download_kubernetes
+  extract_kubernetes
+  recombine_kubernetes_master $KUBERNETES_MASTER_TAR
+fi
 
-bzip2 -k -c -d $CHARM_DIR/files/$VERSION/controller-manager.amd64.bz2 > $TGT_DIR/controller-manager
-chmod 555 $TGT_DIR/controller-manager
+# Extract the kubernetes master tar file.
+tar -xvf $KUBERNETES_MASTER_TAR -C $OUTPUT_DIR
 
-bzip2 -k -c -d $CHARM_DIR/files/$VERSION/scheduler.amd64.bz2 > $TGT_DIR/scheduler
-chmod 555 $TGT_DIR/scheduler
+# Create symlinks so the short names can be called.
+ln -s $OUTPUT_DIR/kube-apiserver $OUTPUT_DIR/apiserver
+ln -s $OUTPUT_DIR/kube-controller-manager $OUTPUT_DIR/controller-manager
+ln -s $OUTPUT_DIR/kube-scheduler $OUTPUT_DIR/scheduler
 
-apt-get install -q -y nginx
-
+# Open port 8080 for nginx.
 open-port 8080
