@@ -17,7 +17,10 @@ hooks = hookenv.Hooks()
 @hooks.hook('config-changed')
 def config_changed():
     """
-    Called whenever the configuration changes.
+    On the execution of the juju event 'config-changed' this function
+    determines the appropriate architecture and the configured version to 
+    install kubernetes binary files from the tar file in the charm or the
+    gsutil command.
     """
     # Get the package architecture, rather than the from the kernel (uname -m).
     arch = subprocess.check_output(['dpkg', '--print-architecture']).strip()
