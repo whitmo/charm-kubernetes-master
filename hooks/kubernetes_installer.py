@@ -37,7 +37,7 @@ class KubernetesInstaller():
             command = 'tar -xvzf {0} -C {1}'.format(self.kubernetes_file,
                                                     output_dir)
             print(command)
-            output = subprocess.check_output(command.split(), shell=True)
+            output = subprocess.check_output(command, shell=True)
             print(output)
         else:
             # Get the binaries from the gsutil command.
