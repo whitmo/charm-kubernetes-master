@@ -54,9 +54,19 @@ binary (available in the releases binary tarball) and point it to the master wit
     public-address: 104.131.108.99
     $ export KUBERNETES_MASTER="104.131.108.99"
 
+# Configuration
+For you convenience this charm supports changing the version of kubernetes binaries.  
+This can be done through the Juju GUI or on the command line:
+
+    juju set kubernetes version=”v0.8.2”
+
+If the charm does not already contain the tar file with the desired architecture 
+and version it will attempt to download the kubernetes binaries using the gsutil 
+command.
 
 Congratulations you know have deployed a Kubernetes environment! Use the
-[kubectl](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/kubectl.md) to interact with the environment.
+[kubectl](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/kubectl.md) 
+to interact with the environment.
 
 # Kubernetes information
 
