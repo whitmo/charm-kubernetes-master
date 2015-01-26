@@ -9,7 +9,7 @@ lint:
 	@.venv/bin/charm proof
 
 test: test-depends
-	@CHARM_DIR=. PYTHONPATH=./hooks .venv/bin/py.test unit_tests
+	@CHARM_DIR=. PYTHONPATH=./hooks .venv/bin/py.test unit_tests/*
 
 test-depends: virtualenv
 	.venv/bin/pip install -q -r requirements.txt
