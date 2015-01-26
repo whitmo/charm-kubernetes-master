@@ -2,6 +2,13 @@ name: kubernetes-master
 summary: Container Cluster Management Master
 description: |
   Provides a kubernetes api endpoint, scheduler for managing containers.
+maintainers:
+    - Matt Bruzek <matt.bruzek@canonical.com>
+    - White Morris <whit.morriss@canonical.com>
+    - Charles Butler <charles.butler@canonical.com>
+tags:
+    - ops
+    - network
 provides:
   # only real difference is that we want to ssl secure client, ideally
   # we'd do both but not supported afaics.
