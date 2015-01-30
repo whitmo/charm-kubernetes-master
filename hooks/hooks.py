@@ -18,7 +18,7 @@ hooks = hookenv.Hooks()
 def config_changed():
     """
     On the execution of the juju event 'config-changed' this function
-    determines the appropriate architecture and the configured version to 
+    determines the appropriate architecture and the configured version to
     install kubernetes binary files from the tar file in the charm or the
     gsutil command.
     """
@@ -27,7 +27,7 @@ def config_changed():
     # Get the version of kubernetes to install.
     version = subprocess.check_output(['config-get', 'version']).strip()
     # Construct the kubernetes tar file name from the arch and version.
-    kubernetes_tar_file = 'kubernetes-master-{0}-{1}.tar.gz'.format(version, 
+    kubernetes_tar_file = 'kubernetes-master-{0}-{1}.tar.gz'.format(version,
                                                                     arch)
     CHARM_DIR = os.environ.get('CHARM_DIR', '')
     kubernetes_file = os.path.join(CHARM_DIR, 'files', kubernetes_tar_file)

@@ -3,7 +3,6 @@
 import os
 import shutil
 import subprocess
-import sys
 
 
 class KubernetesInstaller():
@@ -15,14 +14,13 @@ class KubernetesInstaller():
     def __init__(self, arch, version, kubernetes_file):
         """ Gather the required variables for the install. """
         # The kubernetes-master charm needs certain commands to be aliased.
-        self.aliases = { 'kube-apiserver': 'apiserver',
-                         'kube-controller-manager': 'controller-manager',
-                         'kube-scheduler': 'scheduler',
-                         'kubectl': 'kubectl'}
+        self.aliases = {'kube-apiserver': 'apiserver',
+                        'kube-controller-manager': 'controller-manager',
+                        'kube-scheduler': 'scheduler',
+                        'kubectl': 'kubectl'}
         self.arch = arch
         self.version = version
         self.kubernetes_file = kubernetes_file
-
 
     def install(self, output_dir='/opt/kubernetes/bin'):
         """ Install kubernetes binary files from the tar file or gsutil. """
@@ -54,11 +52,10 @@ class KubernetesInstaller():
             print(command)
             subprocess.check_call(command.split())
 
-
     def get_kubernetes_gsutil(self, directory):
         """ Download the kubernetes binary objects from gsutil. """
         uri = 'gs://kubernetes-release/release/{0}/bin/linux/{1}/'.format(
-               self.version, self.arch)
+              self.version, self.arch)
         gs_command = 'gsutil cp {0} {1}'
         # Download all the keys in the aliases dictionary to this machine.
         for key in self.aliases:
@@ -69,4 +66,3 @@ class KubernetesInstaller():
             command = gs_command.format(remote, local)
             print(command)
             subprocess.check_call(command.split())
-

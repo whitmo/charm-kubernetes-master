@@ -1,5 +1,4 @@
 from path import Path
-import pytest
 import sys
 
 d = Path('__file__').parent.abspath() / 'hooks'
