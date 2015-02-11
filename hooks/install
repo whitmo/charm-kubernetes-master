@@ -3,7 +3,7 @@
 set -ex
 
 apt-get update -qq
-apt-get install -y -q build-essential libssl-dev libffi-dev nginx python-dev python-pip wget
+apt-get install -y -q build-essential git libssl-dev libffi-dev nginx python-dev python-pip wget
 pip install gsutil
 
 VERSION=`config-get version`

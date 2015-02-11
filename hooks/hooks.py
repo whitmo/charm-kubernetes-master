@@ -32,8 +32,8 @@ def config_changed():
     CHARM_DIR = os.environ.get('CHARM_DIR', '')
     kubernetes_file = os.path.join(CHARM_DIR, 'files', kubernetes_tar_file)
     installer = KubernetesInstaller(arch, version, kubernetes_file)
-    # Install the kubernetes binary files in the /opt/kubernetes/bin directory.
-    installer.install('/opt/kubernetes/bin')
+    # Install the Kubernetes code on this server in the /opt/kubernetes directory.
+    installer.install('/opt/kubernetes')
     relation_changed()
 
 
