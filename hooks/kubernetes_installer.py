@@ -22,12 +22,18 @@ class KubernetesInstaller():
         self.version = version
         self.kubernetes_file = kubernetes_file
 
-    def install(self, output_dir='/opt/kubernetes/bin'):
+    def install(self, output_dir='/opt/kubernetes'):
         """ Install kubernetes binary files from the tar file or gsutil. """
         if os.path.isdir(output_dir):
             # Remote old content to remain idempotent.
             shutil.rmtree(output_dir)
-        # Create the output directory.
+        kubernetes_repo = 'http://github.com/GoogleCloudPlatform/kubernetes'
+        git_clone = 'git clone {0} {1}'.format(kubernetes_repo, output_dir)
+        print(git_clone)
+        subprocess.check_call(git_clone.split())
+
+        output_dir = os.path.join(output_dir, 'bin')
+        # Create an output directory for binaries.
         os.makedirs(output_dir)
 
         if os.path.exists(self.kubernetes_file):
