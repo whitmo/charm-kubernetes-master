@@ -4,7 +4,7 @@ set -ex
 
 apt-get update -qq
 apt-get install -y -q build-essential libssl-dev libffi-dev nginx python-dev python-pip wget
-pip install gsutil
+pip install gsutil path.py
 
 VERSION=`config-get version`
 ARCH=`dpkg --print-architecture`

@@ -1,8 +1,7 @@
-#!/usr/bin/python
-
 import os
 import shutil
 import subprocess
+from path import path
 
 
 class KubernetesInstaller():
@@ -20,17 +19,17 @@ class KubernetesInstaller():
                         'kubectl': 'kubectl'}
         self.arch = arch
         self.version = version
-        self.kubernetes_file = kubernetes_file
+        self.kubernetes_file = path(kubernetes_file)
 
-    def install(self, output_dir='/opt/kubernetes/bin'):
+    def install(self, output_dir=path('/opt/kubernetes/bin')):
         """ Install kubernetes binary files from the tar file or gsutil. """
-        if os.path.isdir(output_dir):
-            # Remote old content to remain idempotent.
-            shutil.rmtree(output_dir)
+        if output_dir.exists():
+            output_dir.rmtree()
+        
         # Create the output directory.
-        os.makedirs(output_dir)
+        output_dir.makedirs_p()
 
-        if os.path.exists(self.kubernetes_file):
+        if self.kubernetes_file.exists():
             # Untar the file to the output directory.
             command = 'tar -xvzf {0} -C {1}'.format(self.kubernetes_file,
                                                     output_dir)
@@ -43,14 +42,13 @@ class KubernetesInstaller():
 
         # Create the symbolic links to the real kubernetes binaries.
         # This can be removed if the code is changed to call real commands.
-        usr_local_bin = '/usr/local/bin'
+        usr_local_bin = path('/usr/local/bin')
         for key, value in self.aliases.iteritems():
-            target = os.path.join(output_dir, key)
-            link = os.path.join(usr_local_bin, value)
-            ln_command = 'ln -s {0} {1}'.format(target, link)
-            command = ln_command.format(target, link)
-            print(command)
-            subprocess.check_call(command.split())
+            target = output_dir / key
+            link = usr_local_bin / value
+            if link.exists():
+                link.remove()
+            target.symlink(link)
 
     def get_kubernetes_gsutil(self, directory):
         """ Download the kubernetes binary objects from gsutil. """
