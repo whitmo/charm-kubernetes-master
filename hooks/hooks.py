@@ -9,7 +9,7 @@ import sys
 
 from charmhelpers.core import hookenv, host
 from kubernetes_installer import KubernetesInstaller
-
+from path import path
 
 hooks = hookenv.Hooks()
 
@@ -24,17 +24,31 @@ def config_changed():
     """
     # Get the package architecture, rather than the from the kernel (uname -m).
     arch = subprocess.check_output(['dpkg', '--print-architecture']).strip()
+
     # Get the version of kubernetes to install.
     version = subprocess.check_output(['config-get', 'version']).strip()
+
     # Construct the kubernetes tar file name from the arch and version.
     kubernetes_tar_file = 'kubernetes-master-{0}-{1}.tar.gz'.format(version,
                                                                     arch)
-    CHARM_DIR = os.environ.get('CHARM_DIR', '')
-    kubernetes_file = os.path.join(CHARM_DIR, 'files', kubernetes_tar_file)
+    CHARM_DIR = path(os.environ.get('CHARM_DIR', ''))
+    kubernetes_file = CHARM_DIR / 'files' / kubernetes_tar_file
     installer = KubernetesInstaller(arch, version, kubernetes_file)
-    # Install the Kubernetes code on this server in the /opt/kubernetes directory.
-    installer.install('/opt/kubernetes')
+
+    # Install the Kubernetes code on this server in the
+    # /opt/kubernetes directory.
+    installer.install(path('/opt/kubernetes'))
+
     relation_changed()
+
+    bashrc = path("/home/ubuntu/.bashrc")
+    lines = bashrc.lines()
+    line = "export KUBERNETES_MASTER=http://0.0.0.0\n"
+    if line in lines:
+        return
+
+    lines.append(line)
+    bashrc.write_lines(lines)
 
 
 @hooks.hook('etcd-relation-changed', 'minions-api-relation-changed')
