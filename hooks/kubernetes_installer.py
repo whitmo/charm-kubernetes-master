@@ -1,5 +1,4 @@
 import os
-import shutil
 import subprocess
 from path import path
 
@@ -31,9 +30,9 @@ class KubernetesInstaller():
         bindir.makedirs_p()
 
         kubernetes_repo = 'http://github.com/GoogleCloudPlatform/kubernetes'
-        repo_dir = output_dir / 'kubernetes'
+        repo_dir = output_dir / 'kubernetes/src'
         if not repo_dir.exists():
-            git_clone = 'git clone {0} {1}'.format(kubernetes_repo, output_dir)
+            git_clone = 'git clone {0} {1}'.format(kubernetes_repo, repo_dir)
             print(git_clone)
             subprocess.check_call(git_clone.split())
 
