@@ -51,7 +51,7 @@ class KubernetesInstaller():
         # This can be removed if the code is changed to call real commands.
         usr_local_bin = path('/usr/local/bin')
         for key, value in self.aliases.iteritems():
-            target = output_dir / key
+            target = bindir / key
             link = usr_local_bin / value
             if link.exists():
                 link.remove()
