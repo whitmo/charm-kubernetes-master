@@ -2,23 +2,31 @@
 
 set -ex
 
+# Add the the key for the docker repository.
+apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 36A1D7869245C8950F966E92D8576A8BA88D21E9
+echo deb https://get.docker.com/ubuntu docker main > /etc/apt/sources.list.d/docker.list
+
 apt-get update -qq
 apt-get install -y -q \
     build-essential \
     git \
     libssl-dev \
     libffi-dev \
+    lxc-docker \
+    make \
     nginx \
     python-dev \
     python-pip \
     wget
 
-pip install gsutil path.py
+pip install path.py
 
 VERSION=`config-get version`
 ARCH=`dpkg --print-architecture`
-# List the files available for the version and architecture error if none exist.
-gsutil ls gs://kubernetes-release/release/$VERSION/bin/linux/$ARCH/
+REPOSITORY="https://github.com/GoogleCloudPlatform/kubernetes.git"
+OUTPUT_DIRECTORY="/opt/kubernetes"
+
+git clone $REPOSITORY $OUTPUT_DIRECTORY
 
 # Open port 8080 for nginx.
 open-port 8080
