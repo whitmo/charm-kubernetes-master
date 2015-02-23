@@ -15,6 +15,15 @@ test: virtualenv
 functional-test:
 	@bundletester
 
+release: check-path
+	@.venv/bin/pip install git-vendor
+	@.venv/bin/git-vendor sync -d $KUBERNETES_MASTER_BZR
+
+check-path:
+ifndef KUBERNETES_MASTER_BZR
+	$(error KUBERNETES_MASTER_BZR is undefined)
+endif
+
 clean:
 	rm -rf .venv
 	find -name *.pyc -delete
