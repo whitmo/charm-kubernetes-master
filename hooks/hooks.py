@@ -19,21 +19,56 @@ def config_changed():
     """
     On the execution of the juju event 'config-changed' this function
     determines the appropriate architecture and the configured version to
-    install kubernetes binary files from the tar file in the charm or the
-    gsutil command.
+    create kubernetes binary files.
     """
+    # Get the version of kubernetes to install.
+    version = subprocess.check_output(['config-get', 'version']).strip()
+    
+    kubernetes_dir = path('/opt/kubernetes')
+    
+    if not kubernetes_dir.exists():
+        print('The source directory {0} does not exist'.format(kubernetes_dir)
+        exit(1)
+
+    # Change to the kubernetes directory (git repository).
+    kubernetes_dir.cd()
+    
+    # Make sure the git repository is up-to-date.
+
+    git_pull_cmd = 'git pull --ff-only origin master'
+    output = subprocess.check_output(git_pull_cmd.split())
+    print(output)
+
+    # Remove any old build artifacts.
+    output = subprocess.check_output(['make', 'clean'])
+    print(output)
+    
+    # Is the version one of the synonyms for the master branch?
+    if version in ['latest', 'source', 'head', 'master']:
+        branch = 'master'
+    else:
+        # Create a specific tag branch string.
+        branch = 'tags/{0}'.format(version)
+
+    # Checkout the specific branch.
+    git_checkout_cmd = 'git checkout {0}'.format(branch)
+    output = subprocess.check_output(git_checkout_cmd.split())
+    print(output)
+ 
+    # Compile the binaries with the make command you can use the WHAT variable.
+    #make_all = 'make all'
+    make_what = "make all WHAT='cmd/kube-proxy cmd/kube-apiserver cmd/kube-"\
+                "controller-manager plugin/cmd/kube-scheduler cmd/kubecfg'"
+    output = subprocess.check_output(make_what)
+    print(output)
+    
     # Get the package architecture, rather than the from the kernel (uname -m).
     arch = subprocess.check_output(['dpkg', '--print-architecture']).strip()
 
-    # Get the version of kubernetes to install.
-    version = subprocess.check_output(['config-get', 'version']).strip()
+    # Construct the path to the binaries using the arch.
+    output_path = kubernetes_dir / '_output' / 'local' / 'bin' / 'linux' / arch 
 
-    # Construct the kubernetes tar file name from the arch and version.
-    kubernetes_tar_file = 'kubernetes-master-{0}-{1}.tar.gz'.format(version,
-                                                                    arch)
-    CHARM_DIR = path(os.environ.get('CHARM_DIR', ''))
-    kubernetes_file = CHARM_DIR / 'files' / kubernetes_tar_file
-    installer = KubernetesInstaller(arch, version, kubernetes_file)
+    installer = KubernetesInstaller(arch, version, output_path)
 
     # Install the Kubernetes code on this server in the
     # /opt/kubernetes directory.
@@ -41,9 +76,9 @@ def config_changed():
 
     relation_changed()
 
-    bashrc = path("/home/ubuntu/.bashrc")
+    bashrc = path('/home/ubuntu/.bashrc')
     lines = bashrc.lines()
-    line = "export KUBERNETES_MASTER=http://0.0.0.0\n"
+    line = 'export KUBERNETES_MASTER=http://0.0.0.0\n'
     if line in lines:
         return
 
