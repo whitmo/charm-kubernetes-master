@@ -23,26 +23,28 @@ def config_changed():
     """
     # Get the version of kubernetes to install.
     version = subprocess.check_output(['config-get', 'version']).strip()
-    
+
     kubernetes_dir = path('/opt/kubernetes')
-    
+
     if not kubernetes_dir.exists():
-        print('The source directory {0} does not exist'.format(kubernetes_dir)
+        print('The source directory {0} does not exist'.format(kubernetes_dir))
         exit(1)
 
     # Change to the kubernetes directory (git repository).
     kubernetes_dir.cd()
-    
-    # Make sure the git repository is up-to-date.
 
-    git_pull_cmd = 'git pull --ff-only origin master'
-    output = subprocess.check_output(git_pull_cmd.split())
+    # Make sure the git repository is up-to-date.
+    git_fetch = 'git fetch origin'
+    output = subprocess.check_output(git_fetch.split())
+    print(output)
+    git_reset = 'git reset --hard origin/master'
+    output = subprocess.check_output(git_reset.split())
     print(output)
 
     # Remove any old build artifacts.
     output = subprocess.check_output(['make', 'clean'])
     print(output)
-    
+
     # Is the version one of the synonyms for the master branch?
     if version in ['latest', 'source', 'head', 'master']:
         branch = 'master'
@@ -54,25 +56,22 @@ def config_changed():
     git_checkout_cmd = 'git checkout {0}'.format(branch)
     output = subprocess.check_output(git_checkout_cmd.split())
     print(output)
- 
+
     # Compile the binaries with the make command you can use the WHAT variable.
-    #make_all = 'make all'
-    make_what = "make all WHAT='cmd/kube-proxy cmd/kube-apiserver cmd/kube-"\
-                "controller-manager plugin/cmd/kube-scheduler cmd/kubecfg'"
-    output = subprocess.check_output(make_what)
+    make_all = 'make all'
+    # make_what = "make all WHAT='cmd/kube-proxy cmd/kube-apiserver cmd/kube-"\
+    #            "controller-manager plugin/cmd/kube-scheduler cmd/kubecfg'"
+    output = subprocess.check_output(make_all)
     print(output)
-    
+
     # Get the package architecture, rather than the from the kernel (uname -m).
     arch = subprocess.check_output(['dpkg', '--print-architecture']).strip()
 
     # Construct the path to the binaries using the arch.
-    output_path = kubernetes_dir / '_output' / 'local' / 'bin' / 'linux' / arch 
+    output_path = kubernetes_dir / '_output' / 'local' / 'bin' / 'linux' / arch
 
     installer = KubernetesInstaller(arch, version, output_path)
-
-    # Install the Kubernetes code on this server in the
-    # /opt/kubernetes directory.
-    installer.install(path('/opt/kubernetes'))
+    installer.install()
 
     relation_changed()
 

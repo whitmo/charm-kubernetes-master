@@ -10,6 +10,7 @@ apt-get update -qq
 apt-get install -y -q \
     build-essential \
     git \
+    golang-go \
     libssl-dev \
     libffi-dev \
     lxc-docker \
@@ -24,9 +25,13 @@ pip install path.py
 VERSION=`config-get version`
 ARCH=`dpkg --print-architecture`
 REPOSITORY="https://github.com/GoogleCloudPlatform/kubernetes.git"
-OUTPUT_DIRECTORY="/opt/kubernetes"
+KUBERNETES_DIRECTORY="/opt/kubernetes"
 
-git clone $REPOSITORY $OUTPUT_DIRECTORY
+if [ -d $KUBERNETES_DIRECTORY ]; then
+  rm -rf $KUBERNETES_DIRECTORY
+fi
+
+git clone $REPOSITORY $KUBERNETES_DIRECTORY
 
 # Open port 8080 for nginx.
 open-port 8080
