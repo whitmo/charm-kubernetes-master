@@ -2,11 +2,11 @@
 """
 The main hook file is called by Juju.
 """
+import kubernetes_installer
 import os
 import socket
 import subprocess
 import sys
-
 from charmhelpers.core import hookenv, host
 from kubernetes_installer import KubernetesInstaller
 from path import path
@@ -23,54 +23,32 @@ def config_changed():
     """
     # Get the version of kubernetes to install.
     version = subprocess.check_output(['config-get', 'version']).strip()
-
+    # Get the package architecture, rather than the from the kernel (uname -m).
+    arch = subprocess.check_output(['dpkg', '--print-architecture']).strip()
     kubernetes_dir = path('/opt/kubernetes')
+    # Construct the path to the binaries using the arch.
+    output_path = kubernetes_dir / '_output/local/bin/linux' / arch
+    installer = KubernetesInstaller(arch, version, output_path)
+
+    branch = installer.get_branch(version)
 
     if not kubernetes_dir.exists():
         print('The source directory {0} does not exist'.format(kubernetes_dir))
         exit(1)
 
     # Change to the kubernetes directory (git repository).
-    kubernetes_dir.cd()
+    with kubernetes_dir:
+        git_branch = 'git branch | grep "\*" | cut -d" " -f2'
+        current_branch = kubernetes_installer.run(git_branch, shell=True)
+        # Create the path to a file to indicate if the build was broken.
+        broken_build = kubernetes_dir / '.broken_build'
+        # write out the .broken_build file while this block is executing.
+        with installer.check_sentinel(broken_build) as last_build_failed:
+            # Rebuild if the current version is different or last build failed.
+            if current_branch.strip() != version or last_build_failed:
+                installer.build(version, branch)
 
-    # Make sure the git repository is up-to-date.
-    git_fetch = 'git fetch origin'
-    output = subprocess.check_output(git_fetch.split())
-    print(output)
-    git_reset = 'git reset --hard origin/master'
-    output = subprocess.check_output(git_reset.split())
-    print(output)
-
-    # Remove any old build artifacts.
-    output = subprocess.check_output(['make', 'clean'])
-    print(output)
-
-    # Is the version one of the synonyms for the master branch?
-    if version in ['latest', 'source', 'head', 'master']:
-        branch = 'master'
-    else:
-        # Create a specific tag branch string.
-        branch = 'tags/{0}'.format(version)
-
-    # Checkout the specific branch.
-    git_checkout_cmd = 'git checkout {0}'.format(branch)
-    output = subprocess.check_output(git_checkout_cmd.split())
-    print(output)
-
-    # Compile the binaries with the make command you can use the WHAT variable.
-    make_all = 'make all'
-    # make_what = "make all WHAT='cmd/kube-proxy cmd/kube-apiserver cmd/kube-"\
-    #            "controller-manager plugin/cmd/kube-scheduler cmd/kubecfg'"
-    output = subprocess.check_output(make_all)
-    print(output)
-
-    # Get the package architecture, rather than the from the kernel (uname -m).
-    arch = subprocess.check_output(['dpkg', '--print-architecture']).strip()
-
-    # Construct the path to the binaries using the arch.
-    output_path = kubernetes_dir / '_output' / 'local' / 'bin' / 'linux' / arch
-
-    installer = KubernetesInstaller(arch, version, output_path)
+    # Create the symoblic links to the right directories.
     installer.install()
 
     relation_changed()
