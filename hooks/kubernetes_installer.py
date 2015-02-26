@@ -1,6 +1,17 @@
-import os
+import contextlib
+import shlex
 import subprocess
 from path import path
+
+
+def run(command, shell=False):
+    """ A convience method for executing all the commands. """
+    print(command)
+    if shell is False:
+        command = shlex.split(command)
+    output = subprocess.check_output(command, shell=shell)
+    print(output)
+    return output
 
 
 class KubernetesInstaller():
@@ -20,6 +31,64 @@ class KubernetesInstaller():
         self.version = version
         self.output_dir = path(output_dir)
 
+    @contextlib.contextmanager
+    def check_sentinel(filepath):
+        """
+        A context manager method to write a file while the code block is doing
+        something and remove it when done.
+        """
+        fail = False
+        try:
+            yield filepath.exists()
+        except:
+            fail = True
+            filepath.touch()
+            raise
+        finally:
+            if fail is False and filepath.exists():
+                filepath.remove()
+
+    def get_branch(version):
+        """ Return the git branch for the requested version. """
+        # Is the version one of the synonyms for the master branch?
+        if version in ['source', 'head', 'master']:
+            branch = 'master'
+        else:
+            # Create a specific tag branch string.
+            branch = 'tags/{0}'.format(version)
+        return branch
+
+    def build(version, branch):
+        """ Build kubernetes from a github repository using the Makefile. """
+        # Remove any old build artifacts.
+        make_clean = 'make clean'
+        run(make_clean)
+        # Always checkout the master to get the latest repository information.
+        git_checkout_cmd = 'git checkout master'
+        run(git_checkout_cmd)
+        # When checking out a tag, delete the old branch (not master).
+        if branch != 'master':
+            git_drop_branch = 'git branch -D {0}'.format(version)
+            rc = subprocess.call(git_drop_branch.split())
+            if rc != 0:
+                print(rc)
+        # Make sure the git repository is up-to-date.
+        git_fetch = 'git fetch origin {0}'.format(branch)
+        run(git_fetch)
+
+        if branch == 'master':
+            git_reset = 'git reset --hard origin/master'
+            run(git_reset)
+        else:
+            # Checkout a branch of kubernetes so the repo is correct.
+            git_checkout = 'git checkout -b {0} {1}'.format(version, branch)
+            run(git_checkout)
+
+        # Compile the binaries with the make command using the WHAT variable.
+        make_what = "make all WHAT='cmd/kube-apiserver cmd/kubectl "\
+                    "cmd/kube-controller-manager plugin/cmd/kube-scheduler"
+        rc = subprocess.call(shlex.split(make_what))
+
     def install(self, install_dir=path('/usr/local/bin')):
         """ Install kubernetes binary files from the output directory. """
 
@@ -30,7 +99,11 @@ class KubernetesInstaller():
         # This can be removed if the code is changed to call real commands.
         for key, value in self.aliases.iteritems():
             target = self.output_dir / key
-            link = install_dir / value
-            if link.exists():
-                link.remove()
-            target.symlink(link)
+            if target.exists():
+                link = install_dir / value
+                if link.exists():
+                    link.remove()
+                target.symlink(link)
+            else:
+                print('Target file {0} does not exist.'.format(target))
+                exit(1)
