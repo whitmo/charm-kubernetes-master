@@ -21,6 +21,7 @@ apt-get install -y -q \
     wget
 
 pip install path.py
+# pip install gsutils
 
 VERSION=`config-get version`
 ARCH=`dpkg --print-architecture`
