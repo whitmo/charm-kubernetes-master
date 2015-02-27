@@ -2,6 +2,7 @@
 """
 The main hook file is called by Juju.
 """
+import contextlib
 import kubernetes_installer
 import os
 import socket
@@ -13,6 +14,23 @@ from path import path
 
 hooks = hookenv.Hooks()
 
+
+@contextlib.contextmanager
+def check_sentinel(filepath):
+    """ 
+    A context manager method to write a file while the code block is doing
+    something and remove the file when done.
+    """
+    fail = False
+    try:
+        yield filepath.exists()
+    except:
+        fail = True
+        filepath.touch()
+        raise
+    finally:
+        if fail is False and filepath.exists():
+            filepath.remove()
 
 @hooks.hook('config-changed')
 def config_changed():
@@ -26,27 +44,35 @@ def config_changed():
     # Get the package architecture, rather than the from the kernel (uname -m).
     arch = subprocess.check_output(['dpkg', '--print-architecture']).strip()
     kubernetes_dir = path('/opt/kubernetes')
+    if not kubernetes_dir.exists():
+        print('The source directory {0} does not exist'.format(kubernetes_dir))
+        print('Was the kubernetes code cloned during install?')
+        exit(1)
+
+    if version in ['source', 'head', 'master']:
+        branch = 'master'
+    else:
+        # Create a branch to a tag.
+        branch = 'tags/{0}'.format(version)
+
     # Construct the path to the binaries using the arch.
     output_path = kubernetes_dir / '_output/local/bin/linux' / arch
     installer = KubernetesInstaller(arch, version, output_path)
 
-    branch = installer.get_branch(version)
-
-    if not kubernetes_dir.exists():
-        print('The source directory {0} does not exist'.format(kubernetes_dir))
-        exit(1)
-
     # Change to the kubernetes directory (git repository).
     with kubernetes_dir:
+        # Create a command to get the current branch. 
         git_branch = 'git branch | grep "\*" | cut -d" " -f2'
-        current_branch = kubernetes_installer.run(git_branch, shell=True)
+        current_branch = subprocess.check_output(git_branch, shell=True).strip()
         # Create the path to a file to indicate if the build was broken.
         broken_build = kubernetes_dir / '.broken_build'
         # write out the .broken_build file while this block is executing.
-        with installer.check_sentinel(broken_build) as last_build_failed:
+        with check_sentinel(broken_build) as last_build_failed:
             # Rebuild if the current version is different or last build failed.
-            if current_branch.strip() != version or last_build_failed:
-                installer.build(version, branch)
+            if current_branch != version or last_build_failed:
+                installer.build(branch)
+        if not output_path.exists():
+            broken_build.touch()
 
     # Create the symoblic links to the right directories.
     installer.install()
