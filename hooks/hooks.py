@@ -17,7 +17,7 @@ hooks = hookenv.Hooks()
 
 @contextlib.contextmanager
 def check_sentinel(filepath):
-    """ 
+    """
     A context manager method to write a file while the code block is doing
     something and remove the file when done.
     """
@@ -61,7 +61,7 @@ def config_changed():
 
     # Change to the kubernetes directory (git repository).
     with kubernetes_dir:
-        # Create a command to get the current branch. 
+        # Create a command to get the current branch.
         git_branch = 'git branch | grep "\*" | cut -d" " -f2'
         current_branch = subprocess.check_output(git_branch, shell=True).strip()
         # Create the path to a file to indicate if the build was broken.
@@ -73,6 +73,10 @@ def config_changed():
                 installer.build(branch)
         if not output_path.exists():
             broken_build.touch()
+        else:
+            # Notify the minions of a version change.
+            for r in hookenv.relation_ids('minion-api'):
+                hookenv.relation_set(r, version=version)
 
     # Create the symoblic links to the right directories.
     installer.install()
