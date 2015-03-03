@@ -64,10 +64,12 @@ def config_changed():
         # Create a command to get the current branch.
         git_branch = 'git branch | grep "\*" | cut -d" " -f2'
         current_branch = subprocess.check_output(git_branch, shell=True).strip()
+        print('Current branch: ', current_branch)
         # Create the path to a file to indicate if the build was broken.
         broken_build = kubernetes_dir / '.broken_build'
         # write out the .broken_build file while this block is executing.
         with check_sentinel(broken_build) as last_build_failed:
+            print('Last build failed: ', last_build_failed)
             # Rebuild if the current version is different or last build failed.
             if current_branch != version or last_build_failed:
                 installer.build(branch)
@@ -75,7 +77,7 @@ def config_changed():
             broken_build.touch()
         else:
             # Notify the minions of a version change.
-            for r in hookenv.relation_ids('minion-api'):
+            for r in hookenv.relation_ids('minions-api'):
                 hookenv.relation_set(r, version=version)
 
     # Create the symoblic links to the right directories.
