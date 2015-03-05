@@ -15,8 +15,7 @@ def run(command, shell=False):
 
 class KubernetesInstaller():
     """
-    This class contains the logic needed to install kuberentes binary files
-    from the output directory.
+    This class contains the logic needed to install kuberentes binary files.
     """
 
     def __init__(self, arch, version, output_dir):
@@ -43,9 +42,10 @@ class KubernetesInstaller():
         # When checking out a tag, delete the old branch (not master).
         if branch != 'master':
             git_drop_branch = 'git branch -D {0}'.format(self.version)
+            print(git_drop_branch)
             rc = subprocess.call(git_drop_branch.split())
             if rc != 0:
-                print(rc)
+                print('returned: %d' % rc)
         # Make sure the git repository is up-to-date.
         git_fetch = 'git fetch origin {0}'.format(branch)
         run(git_fetch)
@@ -71,25 +71,14 @@ class KubernetesInstaller():
         if not install_dir.isdir():
             install_dir.makedirs_p()
 
-        nginx_dir = path('/usr/share/nginx/html')
-        web = 'kubernetes/{0}/bin/linux/{1}'.format(self.version, self.arch)
-        hosted_dir = nginx_dir / web
-        if not hosted_dir.isdir():
-            hosted_dir.makedirs_p()
-        hosted_dir.chown('www-data', 'www-data')
-
         # Create the symbolic links to the real kubernetes binaries.
-        # This can be removed if the code is changed to call real commands.
         for key, value in self.aliases.iteritems():
             target = self.output_dir / key
             if target.exists():
                 link = install_dir / value
                 if link.exists():
                     link.remove()
-                # Create a symlink to the target.
                 target.symlink(link)
-                # Copy the target to the hosted directory for the minions.
-                target.copy(hosted_dir / key)
             else:
                 print('Error target file {0} does not exist.'.format(target))
                 exit(1)
