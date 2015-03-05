@@ -39,8 +39,9 @@ def config_changed():
     determines the appropriate architecture and the configured version to
     create kubernetes binary files.
     """
+    config = hookenv.config()
     # Get the version of kubernetes to install.
-    version = subprocess.check_output(['config-get', 'version']).strip()
+    version = config['version']
     # Get the package architecture, rather than the from the kernel (uname -m).
     arch = subprocess.check_output(['dpkg', '--print-architecture']).strip()
     kubernetes_dir = path('/opt/kubernetes')
@@ -76,9 +77,11 @@ def config_changed():
         if not output_path.exists():
             broken_build.touch()
         else:
+            print('Notifying minions of verison ' + version)
             # Notify the minions of a version change.
             for r in hookenv.relation_ids('minions-api'):
                 hookenv.relation_set(r, version=version)
+            print('Done notifing minions of version ' + version)
 
     # Create the symoblic links to the right directories.
     installer.install()
@@ -112,6 +115,13 @@ def relation_changed():
         if render_file(n, template_data) or not host.service_running(n):
             host.service_restart(n)
 
+    # Render the file that makes the kubernetes binaries available to minions.
+    if render_file(
+            'distribution', template_data,
+            'conf.tmpl', '/etc/nginx/sites-enabled/distribution') or \
+            not host.service_running('nginx'):
+        host.service_reload('nginx')
+    # Render the default nginx template.
     if render_file(
             'nginx', template_data,
             'conf.tmpl', '/etc/nginx/sites-enabled/default') or \
@@ -124,15 +134,18 @@ def relation_changed():
 
 def notify_minions():
     print("Notify minions.")
+    config = hookenv.config()
     for r in hookenv.relation_ids('minions-api'):
         hookenv.relation_set(
             r,
             hostname=hookenv.unit_private_ip(),
-            port=8080)
+            port=8080,
+            version=config['version'])
 
 
 def get_template_data():
     rels = hookenv.relations()
+    config = hookenv.config()
     template_data = {}
     template_data['etcd_servers'] = ",".join([
         "http://%s:%s" % (s[0], s[1]) for s in sorted(
@@ -143,6 +156,9 @@ def get_template_data():
     template_data['bind_address'] = "127.0.0.1"
     template_data['api_server_address'] = "http://%s:%s" % (
         hookenv.unit_private_ip(), 8080)
+    arch = subprocess.check_output(['dpkg', '--print-architecture']).strip()
+    template_data['web_uri'] = "/kubernetes/%s/local/bin/linux/%s/" % ( 
+        config['version'], arch)
     _encode(template_data)
     return template_data
 
