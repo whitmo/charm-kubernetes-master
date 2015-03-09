@@ -3,7 +3,6 @@
 The main hook file is called by Juju.
 """
 import contextlib
-import kubernetes_installer
 import os
 import socket
 import subprocess
@@ -32,6 +31,7 @@ def check_sentinel(filepath):
         if fail is False and filepath.exists():
             filepath.remove()
 
+
 @hooks.hook('config-changed')
 def config_changed():
     """
@@ -39,6 +39,8 @@ def config_changed():
     determines the appropriate architecture and the configured version to
     create kubernetes binary files.
     """
+    hookenv.log('Starting config-changed')
+    charm_dir = path(hookenv.charm_dir())
     config = hookenv.config()
     # Get the version of kubernetes to install.
     version = config['version']
@@ -67,7 +69,7 @@ def config_changed():
         current_branch = subprocess.check_output(git_branch, shell=True).strip()
         print('Current branch: ', current_branch)
         # Create the path to a file to indicate if the build was broken.
-        broken_build = kubernetes_dir / '.broken_build'
+        broken_build = charm_dir / '.broken_build'
         # write out the .broken_build file while this block is executing.
         with check_sentinel(broken_build) as last_build_failed:
             print('Last build failed: ', last_build_failed)
@@ -88,14 +90,7 @@ def config_changed():
 
     relation_changed()
 
-    bashrc = path('/home/ubuntu/.bashrc')
-    lines = bashrc.lines()
-    line = 'export KUBERNETES_MASTER=http://0.0.0.0\n'
-    if line in lines:
-        return
-
-    lines.append(line)
-    bashrc.write_lines(lines)
+    hookenv.log('The config-changed hook completed successfully.')
 
 
 @hooks.hook('etcd-relation-changed', 'minions-api-relation-changed')
@@ -157,7 +152,7 @@ def get_template_data():
     template_data['api_server_address'] = "http://%s:%s" % (
         hookenv.unit_private_ip(), 8080)
     arch = subprocess.check_output(['dpkg', '--print-architecture']).strip()
-    template_data['web_uri'] = "/kubernetes/%s/local/bin/linux/%s/" % ( 
+    template_data['web_uri'] = "/kubernetes/%s/local/bin/linux/%s/" % (
         config['version'], arch)
     _encode(template_data)
     return template_data
