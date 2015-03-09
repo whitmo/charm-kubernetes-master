@@ -1,3 +1,4 @@
+import os
 import shlex
 import subprocess
 from path import path
@@ -58,12 +59,18 @@ class KubernetesInstaller():
             checkout = 'git checkout -b {0} {1}'.format(self.version, branch)
             run(checkout)
 
+        # Create an environment with the path to the GO binaries included.
+        go_path = ('/usr/local/go/bin', os.environ.get('PATH', ''))
+        go_env = os.environ.copy()
+        go_env['PATH'] = ':'.join(go_path)
+        print(go_env['PATH'])
+
         # Compile the binaries with the make command using the WHAT variable.
         make_what = "make all WHAT='cmd/kube-apiserver cmd/kubectl "\
                     "cmd/kube-controller-manager plugin/cmd/kube-scheduler "\
                     "cmd/kubelet cmd/kube-proxy'"
         print(make_what)
-        rc = subprocess.call(shlex.split(make_what))
+        rc = subprocess.call(shlex.split(make_what), env=go_env)
 
     def install(self, install_dir=path('/usr/local/bin')):
         """ Install kubernetes binary files from the output directory. """
