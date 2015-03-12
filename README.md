@@ -16,7 +16,9 @@ Etcd is a key value store for Kubernetes.  All persistent master state
 is stored in `etcd`.
 
 ### Flannel
-Flannel is a [software defined networking](http://en.wikipedia.org/wiki/Software-defined_networking) component that provides individual subnets for each machine in the cluster.
+Flannel is a
+[software defined networking](http://en.wikipedia.org/wiki/Software-defined_networking)
+component that provides individual subnets for each machine in the cluster.
 
 ### Kubernetes master
 The controlling unit in a Kubernetes cluster is called the master.  It is the

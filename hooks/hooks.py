@@ -2,11 +2,11 @@
 """
 The main hook file is called by Juju.
 """
+import contextlib
 import os
 import socket
 import subprocess
 import sys
-
 from charmhelpers.core import hookenv, host
 from kubernetes_installer import KubernetesInstaller
 from path import path
@@ -14,41 +14,83 @@ from path import path
 hooks = hookenv.Hooks()
 
 
+@contextlib.contextmanager
+def check_sentinel(filepath):
+    """
+    A context manager method to write a file while the code block is doing
+    something and remove the file when done.
+    """
+    fail = False
+    try:
+        yield filepath.exists()
+    except:
+        fail = True
+        filepath.touch()
+        raise
+    finally:
+        if fail is False and filepath.exists():
+            filepath.remove()
+
+
 @hooks.hook('config-changed')
 def config_changed():
     """
     On the execution of the juju event 'config-changed' this function
     determines the appropriate architecture and the configured version to
-    install kubernetes binary files from the tar file in the charm or the
-    gsutil command.
+    create kubernetes binary files.
     """
+    hookenv.log('Starting config-changed')
+    charm_dir = path(hookenv.charm_dir())
+    config = hookenv.config()
+    # Get the version of kubernetes to install.
+    version = config['version']
     # Get the package architecture, rather than the from the kernel (uname -m).
     arch = subprocess.check_output(['dpkg', '--print-architecture']).strip()
+    kubernetes_dir = path('/opt/kubernetes')
+    if not kubernetes_dir.exists():
+        print('The source directory {0} does not exist'.format(kubernetes_dir))
+        print('Was the kubernetes code cloned during install?')
+        exit(1)
 
-    # Get the version of kubernetes to install.
-    version = subprocess.check_output(['config-get', 'version']).strip()
+    if version in ['source', 'head', 'master']:
+        branch = 'master'
+    else:
+        # Create a branch to a tag.
+        branch = 'tags/{0}'.format(version)
 
-    # Construct the kubernetes tar file name from the arch and version.
-    kubernetes_tar_file = 'kubernetes-master-{0}-{1}.tar.gz'.format(version,
-                                                                    arch)
-    CHARM_DIR = path(os.environ.get('CHARM_DIR', ''))
-    kubernetes_file = CHARM_DIR / 'files' / kubernetes_tar_file
-    installer = KubernetesInstaller(arch, version, kubernetes_file)
+    # Construct the path to the binaries using the arch.
+    output_path = kubernetes_dir / '_output/local/bin/linux' / arch
+    installer = KubernetesInstaller(arch, version, output_path)
 
-    # Install the Kubernetes code on this server in the
-    # /opt/kubernetes directory.
-    installer.install(path('/opt/kubernetes'))
+    # Change to the kubernetes directory (git repository).
+    with kubernetes_dir:
+        # Create a command to get the current branch.
+        git_branch = 'git branch | grep "\*" | cut -d" " -f2'
+        current_branch = subprocess.check_output(git_branch, shell=True).strip()
+        print('Current branch: ', current_branch)
+        # Create the path to a file to indicate if the build was broken.
+        broken_build = charm_dir / '.broken_build'
+        # write out the .broken_build file while this block is executing.
+        with check_sentinel(broken_build) as last_build_failed:
+            print('Last build failed: ', last_build_failed)
+            # Rebuild if the current version is different or last build failed.
+            if current_branch != version or last_build_failed:
+                installer.build(branch)
+        if not output_path.exists():
+            broken_build.touch()
+        else:
+            print('Notifying minions of verison ' + version)
+            # Notify the minions of a version change.
+            for r in hookenv.relation_ids('minions-api'):
+                hookenv.relation_set(r, version=version)
+            print('Done notifing minions of version ' + version)
+
+    # Create the symoblic links to the right directories.
+    installer.install()
 
     relation_changed()
 
-    bashrc = path("/home/ubuntu/.bashrc")
-    lines = bashrc.lines()
-    line = "export KUBERNETES_MASTER=http://0.0.0.0\n"
-    if line in lines:
-        return
-
-    lines.append(line)
-    bashrc.write_lines(lines)
+    hookenv.log('The config-changed hook completed successfully.')
 
 
 @hooks.hook('etcd-relation-changed', 'minions-api-relation-changed')
@@ -68,6 +110,13 @@ def relation_changed():
         if render_file(n, template_data) or not host.service_running(n):
             host.service_restart(n)
 
+    # Render the file that makes the kubernetes binaries available to minions.
+    if render_file(
+            'distribution', template_data,
+            'conf.tmpl', '/etc/nginx/sites-enabled/distribution') or \
+            not host.service_running('nginx'):
+        host.service_reload('nginx')
+    # Render the default nginx template.
     if render_file(
             'nginx', template_data,
             'conf.tmpl', '/etc/nginx/sites-enabled/default') or \
@@ -80,15 +129,18 @@ def relation_changed():
 
 def notify_minions():
     print("Notify minions.")
+    config = hookenv.config()
     for r in hookenv.relation_ids('minions-api'):
         hookenv.relation_set(
             r,
             hostname=hookenv.unit_private_ip(),
-            port=8080)
+            port=8080,
+            version=config['version'])
 
 
 def get_template_data():
     rels = hookenv.relations()
+    config = hookenv.config()
     template_data = {}
     template_data['etcd_servers'] = ",".join([
         "http://%s:%s" % (s[0], s[1]) for s in sorted(
@@ -99,6 +151,9 @@ def get_template_data():
     template_data['bind_address'] = "127.0.0.1"
     template_data['api_server_address'] = "http://%s:%s" % (
         hookenv.unit_private_ip(), 8080)
+    arch = subprocess.check_output(['dpkg', '--print-architecture']).strip()
+    template_data['web_uri'] = "/kubernetes/%s/local/bin/linux/%s/" % (
+        config['version'], arch)
     _encode(template_data)
     return template_data
 

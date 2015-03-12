@@ -2,4 +2,8 @@ options:
   version:
     type: string
     default: "v0.8.1"
-    description: "The kubernetes version to install in the charm."
+    description: |
+        The kubernetes release to use in this charm. The binary files are
+        compiled from the source identified by this tag in github. Using the
+        value of "source" will use the master kubernetes branch when compiling
+        the binaries.

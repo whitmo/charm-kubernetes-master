@@ -1,24 +1,57 @@
-#!/bin/bash
+#!/usr/bin/python
 
-set -ex
+import setup
+setup.pre_install()
+import subprocess
 
-apt-get update -qq
-apt-get install -y -q \
-    build-essential \
-    git \
-    libssl-dev \
-    libffi-dev \
-    nginx \
-    python-dev \
-    python-pip \
-    wget
+from charmhelpers.core import hookenv
+from charmhelpers import fetch
+from charmhelpers.fetch import archiveurl
+from path import path
 
-pip install gsutil path.py
 
-VERSION=`config-get version`
-ARCH=`dpkg --print-architecture`
-# List the files available for the version and architecture error if none exist.
-gsutil ls gs://kubernetes-release/release/$VERSION/bin/linux/$ARCH/
+def install():
+    hookenv.log('Installing Debian packages')
 
-# Open port 8080 for nginx.
-open-port 8080
+    # Create the list of packages to install.
+    apt_packages = ['build-essential', 'git', 'make', 'nginx', 'python-pip']
+    fetch.apt_install(fetch.filter_installed_packages(apt_packages))
+
+    hookenv.log('Installing go')
+
+    go_url = 'https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz'
+    go_sha1 = '5020af94b52b65cc9b6f11d50a67e4bae07b0aff'
+
+    handler = archiveurl.ArchiveUrlFetchHandler()
+    handler.install(go_url, '/usr/local', go_sha1, 'sha1')
+
+    hookenv.log('Adding go to the path')
+
+    bashrc = path('/home/ubuntu/.bashrc')
+    lines = bashrc.lines()
+    go_path = 'export PATH=$PATH:$GOROOT/bin\n'
+    if go_path not in lines:
+        lines.append('export GOROOT=/usr/local/go\n')
+        lines.append(go_path)
+        bashrc.write_lines(lines)
+    master = 'export KUBERNETES_MASTER=http://0.0.0.0\n'
+    if master not in lines:
+        lines.append(master)
+        bashrc.write_lines(lines)
+
+    hookenv.log('Downloading kubernetes code')
+
+    repository = 'https://github.com/GoogleCloudPlatform/kubernetes.git'
+    kubernetes_directory = '/opt/kubernetes'
+
+    command = ['git', 'clone', repository, kubernetes_directory]
+    print(command)
+    output = subprocess.check_output(command)
+    print(output)
+
+    hookenv.open_port(8080)
+
+    hookenv.log('Install complete')
+
+if __name__ == "__main__":
+    install()
