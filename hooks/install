@@ -49,6 +49,8 @@ def install():
     output = subprocess.check_output(command)
     print(output)
 
+    hookenv.open_port(8080)
+
     hookenv.log('Install complete')
 
 if __name__ == "__main__":
