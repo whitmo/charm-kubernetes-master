@@ -1,6 +1,6 @@
 #!/bin/bash 
 DEBUG=false
-if [[ $1 == "--debug"]]; then
+if [[ "$1" == "--debug" ]]; then
   DEBUG=true
   set -x
 fi
