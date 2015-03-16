@@ -1,4 +1,9 @@
 #!/bin/bash 
+
+# This script sets up the guestbook example application in Kubernetes.
+
+set -e 
+
 DEBUG=false
 if [[ "$1" == "--debug" ]]; then
   DEBUG=true
