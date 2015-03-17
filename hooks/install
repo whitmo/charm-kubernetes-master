@@ -25,19 +25,21 @@ def install():
     handler = archiveurl.ArchiveUrlFetchHandler()
     handler.install(go_url, '/usr/local', go_sha1, 'sha1')
 
-    hookenv.log('Adding go to the path')
+    hookenv.log('Adding kubernetes and go to the path')
 
-    bashrc = path('/home/ubuntu/.bashrc')
-    lines = bashrc.lines()
-    go_path = 'export PATH=$PATH:$GOROOT/bin\n'
-    if go_path not in lines:
-        lines.append('export GOROOT=/usr/local/go\n')
-        lines.append(go_path)
-        bashrc.write_lines(lines)
-    master = 'export KUBERNETES_MASTER=http://0.0.0.0\n'
-    if master not in lines:
-        lines.append(master)
-        bashrc.write_lines(lines)
+    strings = (
+        'export GOROOT=/usr/local/go\n',
+        'export PATH=$PATH:$GOROOT/bin\n',
+        'export KUBE_MASTER_IP=0.0.0.0\n',
+        'export KUBERNETES_MASTER=http://$KUBE_MASTER_IP\n',
+        )
+    rc_files = (path('/home/ubuntu/.bashrc', path('/root/.bashrc'))
+    for rc_file in rc_files:
+        lines = rc_file.lines()
+        for string in strings:
+            if string not in lines:
+                lines.append(string)
+        rc_file.write_lines(lines)
 
     hookenv.log('Downloading kubernetes code')
 
