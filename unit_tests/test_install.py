@@ -14,18 +14,29 @@ class TestInstallHook():
 
     @patch('install.path')
     def test_update_rc_files(self, pmock):
+        """
+        Test happy path on updating env files. Assuming everything
+        exists and is in place.
+        """
         pmock.return_value.lines.return_value =  ['line1', 'line2']
         install.update_rc_files(['test1', 'test2'])
         pmock.return_value.write_lines.assert_called_with(['line1', 'line2',
                                                            'test1', 'test2'])
 
     def test_update_rc_files_with_nonexistant_path(self):
+        """
+        Test an unhappy path if the bashrc/users do not exist.
+        """
         with pytest.raises(OSError) as exinfo:
             install.update_rc_files(['test1','test2'])
 
     @patch('install.fetch')
     @patch('install.hookenv')
     def test_package_installation(self, hemock, ftmock):
+        """
+        Verify we are calling the known essentials to build and syndicate
+        kubes.
+        """
         pkgs = ['build-essential', 'git',
                 'make', 'nginx', 'python-pip']
         install.install_packages()
@@ -48,6 +59,10 @@ class TestInstallHook():
 
     @patch('install.subprocess')
     def test_clone_repository(self, spmock):
+        """
+         We're not using a unit-tested git library - so ensure our subprocess
+         call is consistent. If we change this, we want to know we've broken it.
+        """
         install.clone_repository()
         repo = 'https://github.com/GoogleCloudPlatform/kubernetes.git'
         direct = '/opt/kubernetes'
@@ -59,6 +74,9 @@ class TestInstallHook():
     @patch('install.update_rc_files')
     @patch('install.hookenv')
     def test_install_main(self, hemock, urmock, crmock, dgmock, ipmock):
+        """
+        Ensure the driver/main method is calling all the supporting methods.
+        """
         strings = [
         'export GOROOT=/usr/local/go\n',
         'export PATH=$PATH:$GOROOT/bin\n',

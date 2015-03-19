@@ -32,14 +32,23 @@ def install():
     hookenv.log('Install complete')
 
 def download_go():
+    """
+    Kubernetes charm strives to support upstream. Part of this is installing a
+    fairly recent edition of GO. This fetches the golang archive and installs
+    it in /usr/local
+    """
     go_url = 'https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz'
     go_sha1 = '5020af94b52b65cc9b6f11d50a67e4bae07b0aff'
-    print 'hi'
     handler = archiveurl.ArchiveUrlFetchHandler()
     handler.install(go_url, '/usr/local', go_sha1, 'sha1')
 
 
 def clone_repository():
+    """
+    Clone the upstream repository into /opt/kubernetes for deployment compilation
+    of kubernetes. Subsequently used during upgrades.
+    """
+
     repository = 'https://github.com/GoogleCloudPlatform/kubernetes.git'
     kubernetes_directory = '/opt/kubernetes'
 
@@ -51,6 +60,10 @@ def clone_repository():
 
 
 def install_packages():
+    """
+     Install required packages to build the k8s source, and syndicate between
+     minion nodes. In addition, fetch pip to handle python dependencies
+    """
     hookenv.log('Installing Debian packages')
     # Create the list of packages to install.
     apt_packages = ['build-essential', 'git', 'make', 'nginx', 'python-pip']
@@ -59,6 +72,10 @@ def install_packages():
 
 
 def update_rc_files(strings):
+    """
+     Preseed the bash environment for ubuntu and root with K8's env vars to
+     make interfacing with the api easier. (see: kubectrl docs)
+    """
     rc_files = [path('/home/ubuntu/.bashrc'), path('/root/.bashrc')]
     for rc_file in rc_files:
         lines = rc_file.lines()
