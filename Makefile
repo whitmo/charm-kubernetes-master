@@ -9,8 +9,8 @@ lint: virtualenv
 	@.venv/bin/flake8 hooks unit_tests --exclude=charmhelpers
 	@.venv/bin/charm proof
 
-test: virtualenv 
-	@CHARM_DIR=. PYTHONPATH=./hooks .venv/bin/py.test unit_tests/*
+test: virtualenv
+	@CHARM_DIR=. PYTHONPATH=./hooks .venv/bin/py.test -v unit_tests/*
 
 functional-test:
 	@bundletester
