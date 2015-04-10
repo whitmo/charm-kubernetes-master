@@ -1,0 +1,2 @@
+e2e:
+    description: Kicks off the end to end tests for Kubernetes
