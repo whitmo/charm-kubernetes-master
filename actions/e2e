@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. /root/.bashrc
+
+/opt/kubernetes/_output/local/bin/linux/amd64/e2e --host="$KUBERNETES_MASTER"
